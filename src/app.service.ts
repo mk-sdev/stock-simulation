@@ -1,91 +1,97 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { RedisService } from './redis.service';
 
 @Injectable()
 export class AppService {
-  private bank = new Map<string, number>();
-  private wallets = new Map<string, Map<string, number>>();
-  private log: { type: 'buy' | 'sell'; wallet_id: string; stock_name: string }[] = [];
+  constructor(private readonly redisService: RedisService) { }
 
-  buySell(walletId: string, stockName: string, type: 'buy' | 'sell') {
-    if (!this.bank.has(stockName)) {
+  async buySell(walletId: string, stockName: string, type: 'buy' | 'sell') {
+    const redis = this.redisService.getClient();
+
+    const bankQtyRaw = await redis.hget('bank:stocks', stockName);
+
+    if (bankQtyRaw === null) {
       throw new NotFoundException('Stock does not exist');
     }
 
-    const bankQuantity = this.bank.get(stockName)!;
-
-    if (!this.wallets.has(walletId)) {
-      this.wallets.set(walletId, new Map());
-    }
-
-    const wallet = this.wallets.get(walletId)!;
-    const walletQuantity = wallet.get(stockName) || 0;
+    const bankQty = Number(bankQtyRaw);
+    const walletKey = `wallet:${walletId}`;
+    const walletQty = Number(await redis.hget(walletKey, stockName) || 0);
 
     if (type === 'buy') {
-      if (bankQuantity <= 0) {
+      if (bankQty <= 0) {
         throw new BadRequestException('No stock in bank');
       }
 
-      this.bank.set(stockName, bankQuantity - 1);
-      wallet.set(stockName, walletQuantity + 1);
+      await redis.hincrby('bank:stocks', stockName, -1);
+      await redis.hincrby(walletKey, stockName, 1);
     }
 
     if (type === 'sell') {
-      if (walletQuantity <= 0) {
+      if (walletQty <= 0) {
         throw new BadRequestException('No stock in wallet');
       }
 
-      this.bank.set(stockName, bankQuantity + 1);
-      wallet.set(stockName, walletQuantity - 1);
+      await redis.hincrby('bank:stocks', stockName, 1);
+      await redis.hincrby(walletKey, stockName, -1);
     }
 
-    this.log.push({
-      type,
-      wallet_id: walletId,
-      stock_name: stockName,
-    });
+    await redis.rpush(
+      'audit:log',
+      JSON.stringify({ type, wallet_id: walletId, stock_name: stockName }),
+    );
   }
 
-  getWallet(walletId: string) {
-    const wallet = this.wallets.get(walletId);
+  async getWallet(walletId: string) {
+    const redis = this.redisService.getClient();
 
-    if (!wallet) {
-      return { id: walletId, stocks: [] };
-    }
+    const data = await redis.hgetall(`wallet:${walletId}`);
 
-    const stocks = Array.from(wallet.entries()).map(([name, quantity]) => ({
+    const stocks = Object.entries(data).map(([name, quantity]) => ({
       name,
-      quantity,
+      quantity: Number(quantity),
     }));
 
     return { id: walletId, stocks };
   }
 
-  getWalletStock(walletId: string, stockName: string) {
-    const wallet = this.wallets.get(walletId);
+  async getWalletStock(walletId: string, stockName: string) {
+    const redis = this.redisService.getClient();
 
-    if (!wallet) return 0;
-
-    return wallet.get(stockName) || 0;
+    const val = await redis.hget(`wallet:${walletId}`, stockName);
+    return Number(val || 0);
   }
 
-  getStocks() {
-    const stocks = Array.from(this.bank.entries()).map(([name, quantity]) => ({
+  async getStocks() {
+    const redis = this.redisService.getClient();
+
+    const data = await redis.hgetall('bank:stocks');
+
+    const stocks = Object.entries(data).map(([name, quantity]) => ({
       name,
-      quantity,
+      quantity: Number(quantity),
     }));
 
     return { stocks };
   }
 
-  setStocks(stocks: { name: string; quantity: number }[]) {
-    this.bank.clear();
+  async setStocks(stocks: { name: string; quantity: number }[]) {
+    const redis = this.redisService.getClient();
+
+    await redis.del('bank:stocks');
 
     for (const stock of stocks) {
-      this.bank.set(stock.name, stock.quantity);
+      await redis.hset('bank:stocks', stock.name, stock.quantity);
     }
   }
 
-  getLog() {
-    return { log: this.log };
+  async getLog() {
+    const redis = this.redisService.getClient();
+
+    const entries = await redis.lrange('audit:log', 0, -1);
+
+    return {
+      log: entries.map((e) => JSON.parse(e)),
+    };
   }
 }
