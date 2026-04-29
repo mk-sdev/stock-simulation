@@ -64,7 +64,7 @@ export class AppController {
     return this.appService.getLog();
   }
 
-  @Post('chaos')
+  @Post('/chaos')
   chaos() {
     setTimeout(() => process.exit(1), 100);
     return { message: 'Instance will terminate' };
