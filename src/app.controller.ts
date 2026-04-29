@@ -69,4 +69,10 @@ export class AppController {
     setTimeout(() => process.exit(1), 100);
     return { message: 'Instance will terminate' };
   }
+
+  // TODO: remove before production
+  @Get('health')
+  health() {
+    return { status: 'OK' };
+  }
 }
