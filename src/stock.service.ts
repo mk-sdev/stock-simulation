@@ -36,7 +36,6 @@ export class StockService {
       type,
       wallet_id: walletId,
       stock_name: stockName,
-      timestamp: Date.now(),
     });
   }
 

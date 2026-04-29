@@ -24,7 +24,16 @@ export class StockRepository {
     }
 
     async incrementWalletStock(walletId: string, stockName: string, delta: number) {
-        await this.redis.hincrby(`wallet:${walletId}`, stockName, delta);
+        const walletKey = `wallet:${walletId}`;
+
+        const newQty = await this.redis.hincrby(walletKey, stockName, delta);
+
+        if (newQty === 0) {
+            // empty table if no stocks left
+            await this.redis.hdel(walletKey, stockName);
+        }
+
+        return newQty;
     }
 
     async pushLog(entry: any) {
