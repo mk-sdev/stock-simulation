@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { BuySellDto } from './dtos/buy-sell.dto';
 import { SetStocksDto } from './dtos/set-stocks.dto';
-import { AppService } from './app.service';
+import { StockService } from './stock.service';
 import { ParseStockNamePipe } from './pipes/parse-stock-name-pipe';
 import { ParseWalletIdPipe } from './pipes/parse-wallet-id-pipe';
 
@@ -18,9 +18,9 @@ import { ParseWalletIdPipe } from './pipes/parse-wallet-id-pipe';
   whitelist: true,
   forbidNonWhitelisted: true,
 }))
-export class AppController {
+export class StockController {
   constructor(
-    private readonly appService: AppService,
+    private readonly appService: StockService,
   ) { }
 
   @Post('wallets/:wallet_id/stocks/:stock_name')
