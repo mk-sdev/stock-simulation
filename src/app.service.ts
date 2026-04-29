@@ -38,8 +38,15 @@ export class AppService {
 
     await redis.rpush(
       'audit:log',
-      JSON.stringify({ type, wallet_id: walletId, stock_name: stockName }),
+      JSON.stringify({
+        type,
+        wallet_id: walletId,
+        stock_name: stockName,
+        timestamp: Date.now(),
+      }),
     );
+
+    await redis.ltrim('audit:log', -10000, -1);
   }
 
   async getWallet(walletId: string) {
