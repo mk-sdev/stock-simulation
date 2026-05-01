@@ -10,12 +10,13 @@ import {
 import { BuySellDto } from './dtos/buy-sell.dto';
 import { SetStocksDto } from './dtos/set-stocks.dto';
 import { StockService } from './stock.service';
-import { ParseStockNamePipe } from './pipes/parse-stock-name-pipe';
-import { ParseWalletIdPipe } from './pipes/parse-wallet-id-pipe';
+import { ParseStockNamePipe } from './pipes/parse-stock-name.pipe';
+import { ParseWalletIdPipe } from './pipes/parse-wallet-id.pipe';
 
 @Controller()
 @UsePipes(new ValidationPipe({
   whitelist: true,
+  transform: true,
   forbidNonWhitelisted: true,
 }))
 export class StockController {
