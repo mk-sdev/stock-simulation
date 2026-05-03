@@ -10,5 +10,4 @@ COPY . .
 
 RUN npm run build 
 
-# change to prod later
-CMD ["npm", "run", "start:dev"]
+CMD ["npm", "run", "start:prod"]

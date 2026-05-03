@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   Post,
   UsePipes,
@@ -21,16 +22,17 @@ import { ParseWalletIdPipe } from './pipes/parse-wallet-id.pipe';
 }))
 export class StockController {
   constructor(
-    private readonly appService: StockService,
+    private readonly stockService: StockService,
   ) { }
 
   @Post('wallets/:wallet_id/stocks/:stock_name')
+  @HttpCode(200)
   async buySellStock(
     @Param('wallet_id', ParseWalletIdPipe) walletId: string,
     @Param('stock_name', ParseStockNamePipe) stockName: string,
     @Body() body: BuySellDto,
   ) {
-    await this.appService.buySell(walletId, stockName, body.type);
+    await this.stockService.buySell(walletId, stockName, body.type);
     return { status: 'ok' };
   }
 
@@ -38,7 +40,7 @@ export class StockController {
   async getWallet(
     @Param('wallet_id', ParseWalletIdPipe) walletId: string,
   ) {
-    return this.appService.getWallet(walletId);
+    return this.stockService.getWallet(walletId);
   }
 
   @Get('wallets/:wallet_id/stocks/:stock_name')
@@ -46,34 +48,30 @@ export class StockController {
     @Param('wallet_id', ParseWalletIdPipe) walletId: string,
     @Param('stock_name', ParseStockNamePipe) stockName: string,
   ) {
-    return this.appService.getWalletStock(walletId, stockName);
+    return this.stockService.getWalletStock(walletId, stockName);
   }
 
   @Get('stocks')
   async getStocks() {
-    return this.appService.getStocks();
+    return this.stockService.getStocks();
   }
 
   @Post('stocks')
+  @HttpCode(200)
   async setStocks(@Body() dto: SetStocksDto) {
-    await this.appService.setStocks(dto.stocks);
+    await this.stockService.setStocks(dto.stocks);
     return { status: 'ok' };
   }
 
   @Get('log')
   async getLog() {
-    return this.appService.getLog();
+    return this.stockService.getLog();
   }
 
   @Post('/chaos')
+  @HttpCode(200)
   chaos() {
     setTimeout(() => process.exit(1), 100);
     return { message: 'Instance will terminate' };
-  }
-
-  // TODO: remove before production
-  @Get('health')
-  health() {
-    return { status: 'OK' };
   }
 }
